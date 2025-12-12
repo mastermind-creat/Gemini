@@ -1,0 +1,8 @@
+{
+  "name": "Gemini Live Console",
+  "description": "A multimodal live interaction console for Gemini 2.0, featuring real-time audio/video streaming and audio visualization.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
