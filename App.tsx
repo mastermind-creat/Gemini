@@ -11,6 +11,16 @@ const App: React.FC = () => {
   const [videoActive, setVideoActive] = useState(false);
   const [screenActive, setScreenActive] = useState(false);
   
+  // Capability checks
+  const [isScreenSharingSupported, setIsScreenSharingSupported] = useState(false);
+  const [isWebcamSupported, setIsWebcamSupported] = useState(false);
+
+  useEffect(() => {
+    // Check browser capabilities on mount
+    setIsScreenSharingSupported(!!navigator.mediaDevices?.getDisplayMedia);
+    setIsWebcamSupported(!!navigator.mediaDevices?.getUserMedia);
+  }, []);
+
   const addLog = (message: LogMessage) => {
     setLogs(prev => [...prev, message].slice(-50)); // Keep last 50
   };
@@ -57,14 +67,18 @@ const App: React.FC = () => {
     }
 
     try {
+      if (!isWebcamSupported) {
+         throw new Error("Camera API not supported in this browser");
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         setVideoActive(true);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      addLog({ role: 'system', text: 'Failed to access camera', timestamp: new Date() });
+      addLog({ role: 'system', text: `Camera Error: ${err.message || 'Failed to access camera'}`, timestamp: new Date() });
     }
   };
 
@@ -82,6 +96,10 @@ const App: React.FC = () => {
     }
 
     try {
+      if (!isScreenSharingSupported) {
+        throw new Error("Screen sharing is not supported in this browser");
+      }
+
       const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -92,9 +110,9 @@ const App: React.FC = () => {
          setScreenActive(false);
       };
 
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      addLog({ role: 'system', text: 'Failed to access screen', timestamp: new Date() });
+      addLog({ role: 'system', text: `Screen Share Error: ${err.message || 'Failed to share screen'}`, timestamp: new Date() });
     }
   };
 
@@ -222,26 +240,30 @@ const App: React.FC = () => {
           {/* Media Controls */}
           <button 
              onClick={toggleVideo}
-             disabled={!connected && !videoActive} 
+             disabled={!isWebcamSupported || (!connected && !videoActive)} 
              className={`p-4 rounded-full transition-all ${
                  videoActive 
                  ? 'bg-neutral-100 text-neutral-900' 
-                 : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
+                 : (!isWebcamSupported || (!connected && !videoActive))
+                   ? 'bg-neutral-800/50 text-neutral-600 cursor-not-allowed'
+                   : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
              }`}
-             title="Toggle Camera"
+             title={!isWebcamSupported ? "Camera not supported" : "Toggle Camera"}
           >
              {videoActive ? <Video size={20} /> : <VideoOff size={20} />}
           </button>
 
           <button 
              onClick={toggleScreen}
-             disabled={!connected && !screenActive}
+             disabled={!isScreenSharingSupported || (!connected && !screenActive)}
              className={`p-4 rounded-full transition-all ${
                  screenActive 
                  ? 'bg-neutral-100 text-neutral-900' 
-                 : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
+                 : (!isScreenSharingSupported || (!connected && !screenActive))
+                   ? 'bg-neutral-800/50 text-neutral-600 cursor-not-allowed'
+                   : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
              }`}
-             title="Share Screen"
+             title={!isScreenSharingSupported ? "Screen sharing not supported" : "Share Screen"}
           >
              <Monitor size={20} />
           </button>
